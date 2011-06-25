@@ -24,6 +24,11 @@ from pyglet.window import key
 X = 0
 Y = 1
 
+# cursor movement rate constants
+fast_rate = 8
+slow_rate = 4
+no_rate = 0
+
 class BackgroundLayer( Layer ):
     def __init__(self):
         super(BackgroundLayer, self).__init__()
@@ -63,8 +68,10 @@ class Cursor( Sprite ):
     def __init__(self, image, boundingRect):
         super(Cursor, self).__init__(image)
         
-        self.position = 50, 50
-        self.rate = 10
+        
+        self.position = boundingRect.rect.midbottom
+    
+        self.rate = fast_rate
         self.boundingRect = boundingRect
         
     def move_up(self):
@@ -94,9 +101,11 @@ class GameControl (Layer):
     
     is_event_handler = True
     
+    
     def __init__(self, cursor):
         super(GameControl, self).__init__()
         self.cursor = cursor
+        self.held_down_key = 0
         print 'cursor: ' + str(cursor)
         
     def on_key_press(self, pressed, modifiers):
@@ -108,6 +117,22 @@ class GameControl (Layer):
             self.cursor.move_left()
         elif pressed == key.RIGHT:
             self.cursor.move_right()
+            
+            
+     
+    def on_text(self, text):
+        if text == 'x':
+            print 'x'
+            self.cursor.rate = slow_rate
+        elif text == 'z':
+            self.cursor.rate = fast_rate
+        else:
+            self.cursor.rate = no_rate
+    
+    def on_key_release(self, symbol, modifiers):
+        print 'key release: ' + str(symbol)
+        if symbol in (key.X, key.Z):
+            self.cursor.rate = no_rate
         
     def on_text_motion(self, motion):
         if motion == key.MOTION_DOWN:
