@@ -43,6 +43,7 @@ class BoundingRect(Layer):
         super(BoundingRect, self).__init__()
         color = 0,153,204,255
         width = 8
+        self.rect = rect
         self.bottom = Line(rect.bottomleft, rect.bottomright, color, width)
         self.top = Line(rect.topleft, rect.topright, color, width)
         self.left = Line(rect.bottomleft, rect.topleft, color, width)
@@ -57,38 +58,35 @@ class BoundingRect(Layer):
         glPopMatrix()
         
 
-class Cursor( Layer ):
+class Cursor( Sprite ):
     
-    def __init__(self, boundingRect):
-        super(Cursor, self).__init__()
-        self.image = pyglet.resource.image('cursor.png')
+    def __init__(self, image, boundingRect):
+        super(Cursor, self).__init__(image)
+        
         self.position = 50, 50
-        self.rate = 1
-        self.rect = boundingRect
+        self.rate = 10
+        self.boundingRect = boundingRect
         
     def move_up(self):
-        print 'move up'
-        self.position = self.position[X], self.position[Y]+self.rate 
+        print self.position
+        if self.position[Y] < self.boundingRect.rect.top:
+            self.position = self.position[X], self.position[Y]+self.rate 
     
     def move_down(self):
-        print 'move down'
-        self.position = self.position[X], self.position[Y]-self.rate 
+        print self.position
+        if self.position[Y] > self.boundingRect.rect.bottom:
+            self.position = self.position[X], self.position[Y]-self.rate 
 
     def move_left(self):
-        print 'move left'
-        self.position = self.position[X]-self.rate, self.position[Y]
+        print self.position
+        if self.position[X] > self.boundingRect.rect.left:
+            self.position = self.position[X]-self.rate, self.position[Y]
     
     def move_right(self):
-        print 'move right'
-        self.position = self.position[X]+self.rate, self.position[Y]
+        print self.position
+        if self.position[X] < self.boundingRect.rect.right:
+            self.position = self.position[X]+self.rate, self.position[Y]
     
-    
-    def draw(self):
-        glPushMatrix()
-        self.transform()
-        self.image.blit(self.position[X], self.position[Y])
-        glPopMatrix()
-
 
 
 
@@ -131,8 +129,8 @@ if __name__ == "__main__":
     
     rect = Rect(50, 50, 700, 700)
     boundingRect = BoundingRect(rect)
-    
-    cursor = Cursor(boundingRect)
+    image = pyglet.resource.image('cursor.png')
+    cursor = Cursor(image, boundingRect)
     scene.add( cursor, z=1)
     scene.add( GameControl(cursor) )
     scene.add(boundingRect, z=1)
