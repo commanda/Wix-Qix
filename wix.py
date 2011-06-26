@@ -103,6 +103,10 @@ class Lines(Layer):
             print 'ignoring'
             return
     
+        # Add this last point to our current line
+        # EDIT: no, don't, that will make this line slanted if we just changed directions
+        # self.currentLine.end = point
+        
         new_start = self.currentLine.end
         self.currentFinishedLines.append(self.currentLine)
         
@@ -118,9 +122,7 @@ class Lines(Layer):
         wall_hit = -1
         if point[X] == self.boundingBox.left.start[X]:
             wall_hit = self.boundingBox.left
-            # See if there's a corner point or two
-            
-            
+            # TODO: See if there's a corner point or two
         elif point[X] == self.boundingBox.right.start[X]:
             wall_hit = self.boundingBox.right
         elif point[Y] == self.boundingBox.top.start[Y]:
@@ -129,12 +131,19 @@ class Lines(Layer):
             wall_hit = self.boundingBox.bottom
         
         if wall_hit != -1:
-            # We did hit a wall. Add all our vertices and make a big polygon.
+            
+            # We did hit a wall. 
+            
+            # Add the current point to our current line
+            self.currentLine.end = point
+            
+            
+            # Add all our vertices and make a big polygon.
             vertices = []
             for line in self.currentFinishedLines:
                 vertices.append(line.start)
                 vertices.append(line.end)
-            
+            print vertices
             # We now need to pretend that the blue bounding box is part of this polygon
             # Find which two or three sides of the bounding box are involved in this rect
             # Take part of the wall we just hit, from the point we hit at until the corner that's
