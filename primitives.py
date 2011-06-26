@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 """
+from http://code.google.com/p/los-cocos/source/browse/trunk/tools/primitives.py?r=1026
+with edits by Amanda Wixted, 2011
 Implementing 2D drawing primitives using
 pyglet.gl
 copyright 2007 by Flavio Codeco Coelho
@@ -445,5 +447,4 @@ if __name__=="__main__":
         a.rotation+=1
         P.render()
         l.render()
-        r.render()
         win.flip()

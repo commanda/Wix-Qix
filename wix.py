@@ -48,11 +48,9 @@ class BackgroundLayer( Layer ):
 
 
 class FillRectLayer(Layer):
-    def __init__(self, rect, color):
+    def __init__(self, vertices, color):
         super(FillRectLayer, self).__init__()
-        self.rect = rect
-        self.color = color
-        self.polygon = Polygon([rect.bottomleft, rect.bottomright, rect.topright, rect.topleft],color=(.3,0.2,0.5,.7))
+        self.polygon = Polygon(vertices,color=(.3,0.2,0.5,1.0))
 
     def draw(self):
         self.polygon.render()
@@ -96,7 +94,7 @@ class Lines(Layer):
         self.finishedBoxes = []
         self.last_point_on_wall = start_point
         self.start_wall = Line(rect.bottomleft, rect.bottomright, self.color, self.width)
-        
+        self.box_color = 255,255,0,255
         
     
     def end_line_at_point(self, point):
@@ -120,22 +118,17 @@ class Lines(Layer):
             wall_hit = Line(self.rect.bottomleft, self.rect.bottomright, self.color, self.width)
         
         if wall_hit != -1:
-            print 'wall hit: '+str(wall_hit.start)+ ' '+str(wall_hit.end)
-            is_vertical = True
-            is_start_line_vertical = self.start_wall.start[X] == self.start_wall.end[X]
-            is_end_line_vertical = wall_hit.start[X] == wall_hit.end[X]
+            # We did hit a wall. Add all our vertices and make a big polygon.
+            vertices = []
             for line in self.currentFinishedLines:
-                # A new rect is each of our finished lines with each of both of the start wall and the current wall 
-                is_vertical = line.start[X] == line.end[X]
-                print 'me: '+str(is_vertical) + ' startwall: '+str(is_start_line_vertical)+' endwall: '+str(is_end_line_vertical)
+                vertices.append(line.start)
+                vertices.append(line.end)
                 
-                # Decide which third wall to use with this line, in addition to the start_wall and wall_hit
-                
-                
-                #if is_vertical:
-                 #   new_rect = Rect(
-                
-                #else:
+            
+            polygon = FillRectLayer(vertices, self.box_color)
+            self.finishedBoxes.append(polygon)
+            
+            
                     
     
             # Save this point, because it's now the last time we hit a wall
@@ -145,7 +138,11 @@ class Lines(Layer):
         self.currentLine = Line(new_start, point, self.color, self.width)
         
         
-        
+    def line_length(self, line):
+        if line.start[X] == line.end[X]:
+            return math.fabs(line.start[Y] - line.end[Y])
+        else:
+            return math.fabs(line.start[X] - line.end[X])
     
     def add_point(self, point):
         print 'add point: '+str(point)
@@ -311,10 +308,5 @@ if __name__ == "__main__":
     scene.add( cursor, z=1)
     scene.add( GameControl(cursor) )
     scene.add(boundingRect, z=1)
-    
-    rect1 = Rect(100,100,100,100)
-    color1 = 255,255,255,255
-    box1 = FillRectLayer(rect1,color1) 
-    scene.add(box1, z=1)
     
     director.run(scene)
