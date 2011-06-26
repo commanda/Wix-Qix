@@ -106,10 +106,20 @@ class Lines(Layer):
         new_start = self.currentLine.end
         self.currentFinishedLines.append(self.currentLine)
         
-        wall_hit = -1
+        # There will be either 0, 1, or 2 missing corners
+        # 0 is when we start and ended on the same wall/line
+        # 1 is when we started on one line and ended on another that is perpendicular
+        # 2 is when we started and ended on parallel lines
+        
+        corner_point1 = self.rect.bottomleft
+        corner_point2 = self.rect.topleft
+        
         # See which wall we just hit, if any
+        wall_hit = -1
         if point[X] == self.rect.left:
             wall_hit = Line(self.rect.bottomleft, self.rect.topleft, self.color, self.width)
+                
+            
         elif point[X] == self.rect.right:
             wall_hit = Line(self.rect.bottomright, self.rect.topright, self.color, self.width)
         elif point[Y] == self.rect.top:
@@ -123,16 +133,28 @@ class Lines(Layer):
             for line in self.currentFinishedLines:
                 vertices.append(line.start)
                 vertices.append(line.end)
-                
+            
+            # We now need to pretend that the blue bounding box is part of this polygon
+            # Find which two or three sides of the bounding box are involved in this rect
+            # Take part of the wall we just hit, from the point we hit at until the corner that's
+            # closest to the last_point_on_wall, the closing point
+            
+            
             
             polygon = FillRectLayer(vertices, self.box_color)
             self.finishedBoxes.append(polygon)
             
-            
-                    
-    
             # Save this point, because it's now the last time we hit a wall
             self.last_point_on_wall = point
+            
+            # Save this line because it's now the last wall we hit
+            self.start_wall = wall_hit
+            
+            # Move all our current lines into the old lines collection
+            for line in self.currentFinishedLines:
+                self.oldFinishedLines.append(line)
+            # Delete everything from the currentFinishedLines, we're restarting
+            self.currentFinishedLines = []
             
         # Start a new line because we just finished the old line    
         self.currentLine = Line(new_start, point, self.color, self.width)
@@ -147,6 +169,10 @@ class Lines(Layer):
     def add_point(self, point):
         print 'add point: '+str(point)
         self.currentLine.end = point
+        wall_hit = -1
+        if point[X] == self.rect.left or point[X] == self.rect.right or point[Y] == self.rect.top or point[Y] == self.rect.bottom:
+            self.end_line_at_point(point)
+        
     
     def draw(self):
         glPushMatrix()
