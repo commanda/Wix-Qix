@@ -20,6 +20,8 @@ import pyglet
 from pyglet import gl, font
 from pyglet.window import key
 
+from primitives import *
+
 # position coordinate indices (constants)
 X = 0
 Y = 1
@@ -43,6 +45,24 @@ class BackgroundLayer( Layer ):
         glPopMatrix()
 
 
+
+
+class FillRectLayer(Layer):
+    def __init__(self, rect, color):
+        super(FillRectLayer, self).__init__()
+        self.rect = rect
+        self.color = color
+        self.polygon = Polygon([rect.bottomleft, rect.bottomright, rect.topright, rect.topleft],color=(.3,0.2,0.5,.7))
+
+    def draw(self):
+        self.polygon.render()
+
+
+
+
+
+
+
 class BoundingRect(Layer):
     def __init__(self, rect):
         super(BoundingRect, self).__init__()
@@ -64,32 +84,90 @@ class BoundingRect(Layer):
 
 
 class Lines(Layer):
-    def __init__(self, start_point):
+    def __init__(self, rect, start_point):
         super(Lines, self).__init__()
+        self.rect = rect
         # Collection of lines we're currently working on drawing
+        self.oldFinishedLines = []
         self.currentFinishedLines = []
         self.color = 255,255,255,255
         self.width = 3
         self.currentLine = Line(start_point, start_point, self.color, self.width)
-    
+        self.finishedBoxes = []
+        self.last_point_on_wall = start_point
+        self.start_wall = Line(rect.bottomleft, rect.bottomright, self.color, self.width)
+        
+        
     
     def end_line_at_point(self, point):
+        print 'end line at: '+str(point)
+        if point == self.last_point_on_wall:
+            print 'ignoring'
+            return
+    
         new_start = self.currentLine.end
         self.currentFinishedLines.append(self.currentLine)
+        
+        wall_hit = -1
+        # See which wall we just hit, if any
+        if point[X] == self.rect.left:
+            wall_hit = Line(self.rect.bottomleft, self.rect.topleft, self.color, self.width)
+        elif point[X] == self.rect.right:
+            wall_hit = Line(self.rect.bottomright, self.rect.topright, self.color, self.width)
+        elif point[Y] == self.rect.top:
+            wall_hit = Line(self.rect.topleft, self.rect.topright, self.color, self.width)
+        elif point[Y] == self.rect.bottom:
+            wall_hit = Line(self.rect.bottomleft, self.rect.bottomright, self.color, self.width)
+        
+        if wall_hit != -1:
+            print 'wall hit: '+str(wall_hit.start)+ ' '+str(wall_hit.end)
+            is_vertical = True
+            is_start_line_vertical = self.start_wall.start[X] == self.start_wall.end[X]
+            is_end_line_vertical = wall_hit.start[X] == wall_hit.end[X]
+            for line in self.currentFinishedLines:
+                # A new rect is each of our finished lines with each of both of the start wall and the current wall 
+                is_vertical = line.start[X] == line.end[X]
+                print 'me: '+str(is_vertical) + ' startwall: '+str(is_start_line_vertical)+' endwall: '+str(is_end_line_vertical)
+                
+                # Decide which third wall to use with this line, in addition to the start_wall and wall_hit
+                
+                
+                #if is_vertical:
+                 #   new_rect = Rect(
+                
+                #else:
+                    
+    
+            # Save this point, because it's now the last time we hit a wall
+            self.last_point_on_wall = point
+            
+        # Start a new line because we just finished the old line    
         self.currentLine = Line(new_start, point, self.color, self.width)
+        
+        
         
     
     def add_point(self, point):
+        print 'add point: '+str(point)
         self.currentLine.end = point
     
     def draw(self):
         glPushMatrix()
         self.transform()
         
+        # Tell all our finished boxes to draw
+        for box in self.finishedBoxes:
+            box.draw()
+        
+        # Tell all our lines to draw
         self.currentLine.draw()
+        
+        for line in self.oldFinishedLines:
+            line.draw()
         
         for line in self.currentFinishedLines:
             line.draw()
+            
         
         glPopMatrix()
 
@@ -120,6 +198,7 @@ class Cursor( Sprite ):
             self.position = self.position[X], self.position[Y]+self.rate
             
         else:
+            self.position = self.position[X], self.boundingRect.rect.top
             self.lines.end_line_at_point(self.position)
         if new_direction != self.direction:
             self.lines.end_line_at_point(self.position)
@@ -134,6 +213,7 @@ class Cursor( Sprite ):
             self.position = self.position[X], self.position[Y]-self.rate 
             
         else:
+            self.position = self.position[X], self.boundingRect.rect.bottom
             self.lines.end_line_at_point(self.position)
         if new_direction != self.direction:
             self.lines.end_line_at_point(self.position)
@@ -148,6 +228,7 @@ class Cursor( Sprite ):
             self.position = self.position[X]-self.rate, self.position[Y]
             
         else:
+            self.position = self.boundingRect.rect.left, self.position[Y]
             self.lines.end_line_at_point(self.position)
         if new_direction != self.direction:
             self.lines.end_line_at_point(self.position)
@@ -161,6 +242,7 @@ class Cursor( Sprite ):
             self.position = self.position[X]+self.rate, self.position[Y]
                     
         else:
+            self.position = self.boundingRect.rect.right, self.position[Y]
             self.lines.end_line_at_point(self.position)
         
         if new_direction != self.direction:
@@ -182,17 +264,6 @@ class GameControl (Layer):
         
        
         
-    def on_key_press(self, pressed, modifiers):
-        if pressed == key.UP:
-            self.cursor.move_up()
-        elif pressed == key.DOWN:
-            self.cursor.move_down()
-        elif pressed == key.LEFT:
-            self.cursor.move_left()
-        elif pressed == key.RIGHT:
-            self.cursor.move_right()
-            
-            
      
     def on_text(self, text):
         if text == 'x':
@@ -231,7 +302,7 @@ if __name__ == "__main__":
 
     start_point = boundingRect.rect.midbottom
 
-    lines = Lines(start_point)
+    lines = Lines(rect, start_point)
     #lines.end_line_at_point(start_point)
     scene.add(lines, z=0)
     
@@ -240,5 +311,10 @@ if __name__ == "__main__":
     scene.add( cursor, z=1)
     scene.add( GameControl(cursor) )
     scene.add(boundingRect, z=1)
+    
+    rect1 = Rect(100,100,100,100)
+    color1 = 255,255,255,255
+    box1 = FillRectLayer(rect1,color1) 
+    scene.add(box1, z=1)
     
     director.run(scene)
