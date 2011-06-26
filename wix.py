@@ -82,9 +82,9 @@ class BoundingRect(Layer):
 
 
 class Lines(Layer):
-    def __init__(self, rect, start_point):
+    def __init__(self, boundingBox, start_point):
         super(Lines, self).__init__()
-        self.rect = rect
+        self.boundingBox = boundingBox
         # Collection of lines we're currently working on drawing
         self.oldFinishedLines = []
         self.currentFinishedLines = []
@@ -111,21 +111,22 @@ class Lines(Layer):
         # 1 is when we started on one line and ended on another that is perpendicular
         # 2 is when we started and ended on parallel lines
         
-        corner_point1 = self.rect.bottomleft
-        corner_point2 = self.rect.topleft
+        #corner_point1 = self.rect.bottomleft
+        #corner_point2 = self.rect.topleft
         
         # See which wall we just hit, if any
         wall_hit = -1
-        if point[X] == self.rect.left:
-            wall_hit = Line(self.rect.bottomleft, self.rect.topleft, self.color, self.width)
-                
+        if point[X] == self.boundingBox.left.start[X]:
+            wall_hit = self.boundingBox.left
+            # See if there's a corner point or two
             
-        elif point[X] == self.rect.right:
-            wall_hit = Line(self.rect.bottomright, self.rect.topright, self.color, self.width)
-        elif point[Y] == self.rect.top:
-            wall_hit = Line(self.rect.topleft, self.rect.topright, self.color, self.width)
-        elif point[Y] == self.rect.bottom:
-            wall_hit = Line(self.rect.bottomleft, self.rect.bottomright, self.color, self.width)
+            
+        elif point[X] == self.boundingBox.right.start[X]:
+            wall_hit = self.boundingBox.right
+        elif point[Y] == self.boundingBox.top.start[Y]:
+            wall_hit = self.boundingBox.top
+        elif point[Y] == self.boundingBox.bottom.start[Y]:
+            wall_hit = self.boundingBox.bottom
         
         if wall_hit != -1:
             # We did hit a wall. Add all our vertices and make a big polygon.
@@ -166,11 +167,22 @@ class Lines(Layer):
         else:
             return math.fabs(line.start[X] - line.end[X])
     
+    def is_point_on_line(self, point, line):
+        if point[X] == line.start[X]:
+            if line.start[Y] <= point[Y] and point[Y] <= line.end[Y]:
+                return True
+        if point[Y] == line.start[Y]:
+            if line.start[X] <= point[X] and point[X] <= line.end[X]:
+                return True
+        return False
+            
+    
     def add_point(self, point):
         print 'add point: '+str(point)
         self.currentLine.end = point
         wall_hit = -1
-        if point[X] == self.rect.left or point[X] == self.rect.right or point[Y] == self.rect.top or point[Y] == self.rect.bottom:
+        # if point[X] == self.boundingBox.left or point[X] == self.rect.right or point[Y] == self.rect.top or point[Y] == self.rect.bottom:
+        if self.is_point_on_line(point, self.boundingBox.left) or self.is_point_on_line(point, self.boundingBox.right) or self.is_point_on_line(point, self.boundingBox.top) or self.is_point_on_line(point, self.boundingBox.bottom):
             self.end_line_at_point(point)
         
     
@@ -325,7 +337,7 @@ if __name__ == "__main__":
 
     start_point = boundingRect.rect.midbottom
 
-    lines = Lines(rect, start_point)
+    lines = Lines(boundingRect, start_point)
     #lines.end_line_at_point(start_point)
     scene.add(lines, z=0)
     
