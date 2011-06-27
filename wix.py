@@ -68,9 +68,11 @@ class BoundingRect(Layer):
         width = 8
         self.rect = rect
         self.bottom = Line(rect.bottomleft, rect.bottomright, color, width)
-        self.top = Line(rect.topleft, rect.topright, color, width)
-        self.left = Line(rect.bottomleft, rect.topleft, color, width)
         self.right = Line(rect.bottomright, rect.topright, color, width)
+        self.top = Line(rect.topright, rect.topleft, color, width)
+        self.left = Line(rect.topleft, rect.bottomleft, color, width)
+        self.edges = [self.bottom, self.right, self.top, self.left]
+        
         
     def draw(self):
         glPushMatrix()
@@ -93,7 +95,7 @@ class Lines(Layer):
         self.currentLine = Line(start_point, start_point, self.color, self.width)
         self.finishedBoxes = []
         self.last_point_on_wall = start_point
-        self.start_wall = Line(rect.bottomleft, rect.bottomright, self.color, self.width)
+        self.start_wall = self.boundingBox.bottom
         self.box_color = 255,255,0,255
         
     
@@ -110,39 +112,57 @@ class Lines(Layer):
         new_start = self.currentLine.end
         self.currentFinishedLines.append(self.currentLine)
         
-        # There will be either 0, 1, or 2 missing corners
-        # 0 is when we start and ended on the same wall/line
-        # 1 is when we started on one line and ended on another that is perpendicular
-        # 2 is when we started and ended on parallel lines
-        
-        #corner_point1 = self.rect.bottomleft
-        #corner_point2 = self.rect.topleft
-        
-        # See which wall we just hit, if any
         wall_hit = -1
-        if point[X] == self.boundingBox.left.start[X]:
-            wall_hit = self.boundingBox.left
-            # TODO: See if there's a corner point or two
-        elif point[X] == self.boundingBox.right.start[X]:
-            wall_hit = self.boundingBox.right
-        elif point[Y] == self.boundingBox.top.start[Y]:
-            wall_hit = self.boundingBox.top
-        elif point[Y] == self.boundingBox.bottom.start[Y]:
-            wall_hit = self.boundingBox.bottom
         
+        corner_point1 = -1,-1
+        corner_point2 = -1,-1
+        
+        start_wall_index = self.boundingBox.edges.index(self.start_wall)
+        for wall_hit_index, wall in enumerate(self.boundingBox.edges):
+            if self.is_point_on_line(point, wall):
+                wall_hit = wall
+                print 'wall hit index: ' + str(wall_hit_index)
+                num_vertices_to_add = 0
+                # Find out if the start wall is the end wall, 
+                # or if they're adjacent, 
+                # or if they're opposite
+                if self.start_wall == wall_hit:
+                    num_vertices_to_add = 1
+                
+                if ((wall_hit_index -1) % 4 == start_wall_index):
+                    # they're adjacent
+                    corner_point1 = wall_hit.start
+                if ((wall_hit_index +1) % 4 == start_wall_index):
+                    corner_point1 = wall_hit.end
+            
+                    
+            
         if wall_hit != -1:
             
             # We did hit a wall. 
-            
+            print 'wall hit'
             # Add the current point to our current line
-            self.currentLine.end = point
-            
+            #self.currentLine.end = point
+        
+        
+            # There will be either 0, 1, or 2 missing corners
+            # 0 is when we start and ended on the same wall/line
+            # 1 is when we started on one line and ended on another that is perpendicular
+            # 2 is when we started and ended on parallel lines
+        
+            # Find the index         
             
             # Add all our vertices and make a big polygon.
             vertices = []
             for line in self.currentFinishedLines:
                 vertices.append(line.start)
                 vertices.append(line.end)
+                
+            
+            if corner_point1[X] != -1:
+                # Add this corner as a vertex to our polygon
+                vertices.append(corner_point1)
+                
             print vertices
             # We now need to pretend that the blue bounding box is part of this polygon
             # Find which two or three sides of the bounding box are involved in this rect
@@ -175,14 +195,23 @@ class Lines(Layer):
             return math.fabs(line.start[Y] - line.end[Y])
         else:
             return math.fabs(line.start[X] - line.end[X])
+            
+    
+    #def is_parallel(self, line1, line2):
+    #    if line1.start[X] 
     
     def is_point_on_line(self, point, line):
         if point[X] == line.start[X]:
             if line.start[Y] <= point[Y] and point[Y] <= line.end[Y]:
                 return True
+            if line.end[Y] <= point[Y] and point[Y] <= line.start[Y]:
+                return True
         if point[Y] == line.start[Y]:
             if line.start[X] <= point[X] and point[X] <= line.end[X]:
                 return True
+            if line.end[X] <= point[X] and point[X] <= line.start[X]:
+                return True
+            
         return False
             
     
@@ -355,5 +384,7 @@ if __name__ == "__main__":
     scene.add( cursor, z=1)
     scene.add( GameControl(cursor) )
     scene.add(boundingRect, z=1)
+    
+    
     
     director.run(scene)
